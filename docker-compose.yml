@@ -1,0 +1,99 @@
+# Internet-in-a-Container
+# A containerized take on Internet-in-a-Box (https://internet-in-a-box.org).
+#
+#   docker compose up -d                       # portal + Kiwix (always on)
+#   COMPOSE_PROFILES=kolibri,books,maps,files  # or set it in .env to add apps
+#
+# Everything is served behind one nginx portal, IIAB-style:
+#   /          home page          /kiwix/    Wikipedia & other ZIMs
+#   /kolibri/  Kolibri LMS        /books/    Calibre-Web e-library
+#   /maps/     OpenStreetMap      /files/    plain file share
+
+name: iiab
+
+x-common: &common
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+
+services:
+  portal:
+    <<: *common
+    image: nginx:1.27-alpine
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    volumes:
+      - ./portal/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./portal/proxy.conf:/etc/nginx/snippets/proxy.conf:ro
+      - ./portal/html:/usr/share/nginx/html:ro
+
+  kiwix:
+    <<: *common
+    image: ghcr.io/kiwix/kiwix-tools:${KIWIX_VERSION:-latest}
+    entrypoint: ["/bin/sh", "/start.sh"]
+    environment:
+      KIWIX_URL_ROOT: /kiwix
+    volumes:
+      - ./kiwix/start.sh:/start.sh:ro
+      - ${DATA_DIR:-./data}/kiwix:/data
+    expose: ["8080"]
+
+  kolibri:
+    <<: *common
+    profiles: ["kolibri"]
+    build:
+      context: ./kolibri
+      args:
+        KOLIBRI_VERSION: ${KOLIBRI_VERSION:-0.19.5}
+    image: iiab/kolibri:${KOLIBRI_VERSION:-0.19.5}
+    environment:
+      KOLIBRI_URL_PATH_PREFIX: /kolibri/
+    volumes:
+      - ${DATA_DIR:-./data}/kolibri:/kolibrihome
+    expose: ["8080"]
+
+  calibre-web:
+    <<: *common
+    profiles: ["books"]
+    image: lscr.io/linuxserver/calibre-web:latest
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TZ: ${TZ:-Etc/UTC}
+      # Adds the calibre binaries for ebook conversion/uploads (x86-64 only).
+      DOCKER_MODS: ${CALIBRE_MODS:-}
+    volumes:
+      - ${DATA_DIR:-./data}/calibre-web:/config
+      - ${DATA_DIR:-./data}/books:/books
+    expose: ["8083"]
+
+  maps:
+    <<: *common
+    profiles: ["maps"]
+    image: maptiler/tileserver-gl:${TILESERVER_VERSION:-latest}
+    command: ["--port", "8080", "--public_url", "/maps/"]
+    volumes:
+      - ${DATA_DIR:-./data}/maps:/data
+    expose: ["8080"]
+
+  # Plain read-only file share. Leave the "files" profile off if you already
+  # share files another way (Samba, Nextcloud, a NAS, ...).
+  files:
+    <<: *common
+    profiles: ["files"]
+    image: nginx:1.27-alpine
+    volumes:
+      - ./files/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${DATA_DIR:-./data}/files:/srv/files:ro
+    expose: ["80"]
+
+  # One-off helper for downloading content. Not started by `up`.
+  #   docker compose run --rm fetch kiwix wikipedia_en_100_mini
+  fetch:
+    profiles: ["tools"]
+    image: alpine:3.20
+    entrypoint: ["/bin/sh", "/fetch.sh"]
+    volumes:
+      - ./scripts/fetch.sh:/fetch.sh:ro
+      - ${DATA_DIR:-./data}:/data

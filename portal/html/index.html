@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Internet-in-a-Container</title>
+<style>
+  /* No external fonts or scripts: this page must work fully offline. */
+  :root {
+    --bg: #f6f3ee; --card: #ffffff; --ink: #1f2328; --muted: #5d636b;
+    --line: #e4ddd2; --accent: #1f6f5c; --off: #b8b2a8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16181b; --card:#1f2226; --ink:#eceae6; --muted:#a3a7ad;
+            --line:#2e3238; --accent:#5cc4a6; --off:#5a5e64; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { max-width: 1040px; margin: 0 auto; padding: 48px 24px 16px; }
+  h1 { font-size: 2rem; margin: 0 0 6px; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--muted); }
+  main { max-width: 1040px; margin: 0 auto; padding: 16px 24px 48px;
+         display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  a.card { display:block; text-decoration:none; color:inherit; background:var(--card);
+           border:1px solid var(--line); border-radius:14px; padding:20px 20px 18px;
+           transition: transform .12s ease, border-color .12s ease; }
+  a.card:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .icon { font-size: 28px; line-height: 1; }
+  h2 { font-size: 1.15rem; margin: 12px 0 4px; }
+  .card p { margin: 0; color: var(--muted); font-size: .95rem; }
+  .status { margin-top: 14px; font-size: .8rem; color: var(--muted); display:flex; align-items:center; gap:6px; }
+  .dot { width:8px; height:8px; border-radius:50%; background:var(--off); }
+  .card.up .dot { background: var(--accent); }
+  .card.down { opacity: .55; }
+  .card.down:hover { transform:none; border-color: var(--line); }
+  footer { max-width:1040px; margin:0 auto; padding:0 24px 40px; color:var(--muted); font-size:.85rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Internet-in-a-Container</h1>
+  <p>Free knowledge, served locally. No internet connection needed.</p>
+</header>
+
+<main>
+  <a class="card" href="/kiwix/" data-check="/kiwix/">
+    <div class="icon">📚</div>
+    <h2>Library (Kiwix)</h2>
+    <p>Wikipedia, Wiktionary, Project Gutenberg, Stack Exchange, TED and more.</p>
+    <div class="status"><span class="dot"></span><span class="label">checking…</span></div>
+  </a>
+  <a class="card" href="/kolibri/" data-check="/kolibri/">
+    <div class="icon">🎓</div>
+    <h2>Kolibri</h2>
+    <p>Courses, videos and exercises, including Khan Academy, with progress tracking.</p>
+    <div class="status"><span class="dot"></span><span class="label">checking…</span></div>
+  </a>
+  <a class="card" href="/books/" data-check="/books/">
+    <div class="icon">📖</div>
+    <h2>Books (Calibre-Web)</h2>
+    <p>Browse, read and download e-books.</p>
+    <div class="status"><span class="dot"></span><span class="label">checking…</span></div>
+  </a>
+  <a class="card" href="/maps/" data-check="/maps/">
+    <div class="icon">🗺️</div>
+    <h2>Maps</h2>
+    <p>Zoomable OpenStreetMap maps for the regions you've loaded.</p>
+    <div class="status"><span class="dot"></span><span class="label">checking…</span></div>
+  </a>
+  <a class="card" href="/files/" data-check="/files/">
+    <div class="icon">🗂️</div>
+    <h2>Shared files</h2>
+    <p>Documents, videos and local materials added by your administrator.</p>
+    <div class="status"><span class="dot"></span><span class="label">checking…</span></div>
+  </a>
+</main>
+
+<footer>Inspired by <a href="https://internet-in-a-box.org" style="color:inherit">Internet-in-a-Box</a>.</footer>
+
+<script>
+  document.querySelectorAll('[data-check]').forEach(async (card) => {
+    const label = card.querySelector('.label');
+    try {
+      const r = await fetch(card.dataset.check, { method: 'GET', redirect: 'follow', cache: 'no-store' });
+      const up = r.ok || (r.status >= 300 && r.status < 500 && r.status !== 404);
+      card.classList.add(up ? 'up' : 'down');
+      label.textContent = up ? 'available' : 'not installed';
+    } catch (e) {
+      card.classList.add('down');
+      label.textContent = 'not installed';
+    }
+    if (card.classList.contains('down')) card.addEventListener('click', ev => ev.preventDefault());
+  });
+</script>
+</body>
+</html>
