@@ -69,6 +69,24 @@ To upload or convert books from the web UI, set
 (for example from MapTiler or OpenMapTiles), enable the `maps` profile, then
 run `docker compose up -d`.
 
+## All-in-one image + Cloudflare Tunnel (Portainer)
+
+`ghcr.io/duimstpj/iiab` bundles the portal, Kiwix and Kolibri into one image
+(built by `.github/workflows/iiab-image.yml` from `iiab/Dockerfile`).
+`portainer-stack.yml` runs it next to `cloudflared`, with nothing to clone.
+
+1. In Cloudflare Zero Trust, go to **Networks → Tunnels → Create a tunnel** (Cloudflared)
+   and copy the token. Add a **Public Hostname** whose service is `http://iiab:80`.
+2. In Portainer, go to **Stacks → Add stack → Web editor**, paste `portainer-stack.yml`,
+   and set `CLOUDFLARE_TUNNEL_TOKEN` (plus `IIAB_DATA=/srv/iiab` if you want
+   content in a host folder). Deploy.
+3. Add content from Portainer's container console, or from the host:
+   ```bash
+   docker exec iiab iiab-fetch kiwix wikipedia_en_100_mini
+   ```
+
+Calibre-Web and maps aren't in the all-in-one image; use the full Compose stack for those.
+
 ## Everyday commands
 
 ```bash

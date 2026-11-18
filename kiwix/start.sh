@@ -3,7 +3,7 @@
 # New .zim files dropped into data/kiwix are picked up within a minute.
 set -u
 
-DATA=/data
+DATA="${KIWIX_DATA:-/data}"
 LIB=/tmp/library.xml
 ROOT="${KIWIX_URL_ROOT:-/kiwix}"
 
@@ -31,4 +31,4 @@ add_new_zims
 ( while sleep 60; do add_new_zims; done ) &
 
 exec kiwix-serve --library --monitorLibrary \
-  --urlRootLocation="$ROOT" --port=8080 "$LIB"
+  --urlRootLocation="$ROOT" --port="${KIWIX_PORT:-8080}" "$LIB"

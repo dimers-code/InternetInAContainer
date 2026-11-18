@@ -1,0 +1,40 @@
+# Internet-in-a-Container + Cloudflare Tunnel.
+# Self-contained: paste into Portainer (Stacks -> Add stack -> Web editor)
+# and set the environment variables below in Portainer's UI.
+#
+#   CLOUDFLARE_TUNNEL_TOKEN  required: token from Cloudflare Zero Trust -> Networks -> Tunnels
+#   IIAB_DATA                optional: host path for content, e.g. /srv/iiab (default: a named volume)
+#   HTTP_PORT                optional: LAN port for direct access (default 8080)
+#   ENABLE_KOLIBRI           optional: true/false (default true)
+#
+# In the tunnel's Public Hostname settings, point your hostname at:  http://iiab:80
+
+services:
+  iiab:
+    image: ghcr.io/duimstpj/iiab:${IIAB_TAG:-latest}
+    container_name: iiab
+    restart: unless-stopped
+    environment:
+      ENABLE_KOLIBRI: ${ENABLE_KOLIBRI:-true}
+      TZ: ${TZ:-America/Chicago}
+    volumes:
+      - ${IIAB_DATA:-iiab-data}:/data
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    networks: [iiab]
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: iiab-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?Set CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on: [iiab]
+    networks: [iiab]
+
+volumes:
+  iiab-data:
+
+networks:
+  iiab:
