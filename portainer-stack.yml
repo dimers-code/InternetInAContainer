@@ -3,11 +3,15 @@
 # and set the environment variables below in Portainer's UI.
 #
 #   CLOUDFLARE_TUNNEL_TOKEN  required: token from Cloudflare Zero Trust -> Networks -> Tunnels
-#   IIAB_DATA                optional: host path for content, e.g. /srv/iiab (default: a named volume)
+#   IIAB_DATA                optional: host path for Kiwix/Kolibri/files, e.g. /srv/iiab
+#   BOOKS_DATA               optional: host path for your Calibre library, e.g. /srv/iiab-books
+#   MAPS_DATA                optional: host path holding .mbtiles files, e.g. /srv/iiab-maps
 #   HTTP_PORT                optional: LAN port for direct access (default 8080)
 #   ENABLE_KOLIBRI           optional: true/false (default true)
 #
+# Unset paths fall back to Docker named volumes.
 # In the tunnel's Public Hostname settings, point your hostname at:  http://iiab:80
+# COMPOSE_PROFILES is not used here: to drop an app, delete its service below.
 
 services:
   iiab:
@@ -23,6 +27,31 @@ services:
       - "${HTTP_PORT:-8080}:80"
     networks: [iiab]
 
+  # /books/  (log in admin / admin123, change it, set library location to /books)
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:latest
+    container_name: calibre-web
+    restart: unless-stopped
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TZ: ${TZ:-America/Chicago}
+      DOCKER_MODS: ${CALIBRE_MODS:-}
+    volumes:
+      - iiab-calibre-config:/config
+      - ${BOOKS_DATA:-iiab-books}:/books
+    networks: [iiab]
+
+  # /maps/  Needs at least one .mbtiles file in MAPS_DATA, or it will restart-loop.
+  maps:
+    image: maptiler/tileserver-gl:latest
+    container_name: maps
+    restart: unless-stopped
+    command: ["--port", "8080", "--public_url", "/maps/"]
+    volumes:
+      - ${MAPS_DATA:-iiab-maps}:/data
+    networks: [iiab]
+
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: iiab-cloudflared
@@ -35,6 +64,9 @@ services:
 
 volumes:
   iiab-data:
+  iiab-books:
+  iiab-maps:
+  iiab-calibre-config:
 
 networks:
   iiab:
