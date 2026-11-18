@@ -16,7 +16,7 @@ them behind an nginx portal with the same `http://box/<app>` layout.
 |-------------|-------------------------|-----------|-------|
 | `/`         | Home page               | always on | `nginx:1.27-alpine` |
 | `/kiwix/`   | Kiwix (ZIM library)     | always on | `ghcr.io/kiwix/kiwix-tools` |
-| `/kolibri/` | Kolibri LMS             | `kolibri` | built locally from PyPI |
+| `/kolibri/` | Kolibri LMS             | `kolibri` | `ghcr.io/duimstpj/iiab-kolibri` |
 | `/books/`   | Calibre-Web             | `books`   | `lscr.io/linuxserver/calibre-web` |
 | `/maps/`    | TileServer GL (OSM)     | `maps`    | `maptiler/tileserver-gl` |
 | `/files/`   | File share (read-only)  | `files`   | `nginx:1.27-alpine` |
@@ -25,7 +25,7 @@ them behind an nginx portal with the same `http://box/<app>` layout.
 
 ```bash
 cp .env.example .env              # choose apps, port, data location
-docker compose up -d --build
+docker compose up -d
 docker compose run --rm fetch kiwix wikipedia_en_100_mini   # ~5 MB test ZIM
 ```
 
@@ -74,7 +74,7 @@ run `docker compose up -d`.
 ```bash
 docker compose ps                       # what's running
 docker compose logs -f kiwix            # watch an app
-docker compose pull && docker compose up -d --build   # update
+docker compose pull && docker compose up -d   # update
 docker compose down                     # stop (content stays in data/)
 ```
 
@@ -84,12 +84,24 @@ Content is just files in `DATA_DIR`, and the images can be moved without interne
 
 ```bash
 # on a connected machine
-docker compose pull && docker compose build
+docker compose pull
 docker save $(docker compose config --images) -o iiab-images.tar
 # copy iiab-images.tar + this folder + data/ to the target, then:
 docker load -i iiab-images.tar
 docker compose up -d
 ```
+
+## Kolibri image
+
+Kolibri has no maintained official image, so this repo builds one from PyPI
+([kolibri/Dockerfile](kolibri/Dockerfile)) and publishes it to GitHub Container
+Registry for amd64 and arm64 via [a GitHub Actions workflow](.github/workflows/kolibri-image.yml).
+It rebuilds when `kolibri/` changes on `main`. To publish another Kolibri version,
+run the workflow from the Actions tab with that version, then set
+`KOLIBRI_VERSION` in `.env`.
+
+If the image can't be pulled, `docker compose up` builds it locally instead.
+To always build it yourself, run `docker compose build kolibri`.
 
 ## Notes and limits
 

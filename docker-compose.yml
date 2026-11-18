@@ -42,11 +42,14 @@ services:
   kolibri:
     <<: *common
     profiles: ["kolibri"]
+    # Pulled from GitHub Container Registry (built by .github/workflows/kolibri-image.yml).
+    # If the pull fails (offline, or a version that hasn't been published),
+    # Compose falls back to building it locally from ./kolibri.
+    image: ${KOLIBRI_IMAGE:-ghcr.io/duimstpj/iiab-kolibri}:${KOLIBRI_VERSION:-0.19.5}
     build:
       context: ./kolibri
       args:
         KOLIBRI_VERSION: ${KOLIBRI_VERSION:-0.19.5}
-    image: iiab/kolibri:${KOLIBRI_VERSION:-0.19.5}
     environment:
       KOLIBRI_URL_PATH_PREFIX: /kolibri/
     volumes:
